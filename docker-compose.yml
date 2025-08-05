@@ -47,7 +47,7 @@ services:
       mail__from: ${MAIL_FROM:-}
       
     volumes:
-      - ${UPLOAD_LOCATION:-./data/ghost}:/var/lib/ghost/content
+      - "./data/ghost:/var/lib/ghost/content"
     depends_on:
       db:
         condition: service_healthy
