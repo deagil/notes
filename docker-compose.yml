@@ -20,7 +20,7 @@ services:
       NODE_ENV: production
       # Use DOMAIN variable for consistency with official setup
       # This should match your custom domain set in Coolify
-      url: https://${DOMAIN:?DOMAIN environment variable is required}
+      url: https://notes.deagil.com
       # Admin domain support
       # NOTE: Coolify limitation - can only route one domain per service
       # For separate admin domain, you'll need additional proxy setup
