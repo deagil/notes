@@ -1,37 +1,29 @@
----
+# Ghost v6 Full Docker Compose for Coolify
+# Adapted from official Ghost Docker setup
 # yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/main/schema/compose-spec.json
-services:
-  caddy:
-    image: caddy:2.10.0-alpine@sha256:e2e3a089760c453bc51c4e718342bd7032d6714f15b437db7121bfc2de2654a6
-    restart: always
-    ports:
-      - "80:80"
-      - "443:443"
-    environment:
-      DOMAIN: ${DOMAIN:?DOMAIN environment variable is required}
-      ADMIN_DOMAIN: ${ADMIN_DOMAIN:-}
-      ACTIVITYPUB_TARGET: ${ACTIVITYPUB_TARGET:-https://ap.ghost.org}
-    volumes:
-      - ./caddy:/etc/caddy
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - ghost
-    networks:
-      - ghost_network
 
+# COMPOSE_PROFILES environment variable controls which services run
+# Set in Coolify: COMPOSE_PROFILES=analytics,activitypub (or just one feature)
+
+services:
   ghost:
-    # Do not alter this without updating the Tinybird Sync container as well
+    # Keep exact same image as official setup
     image: ghost:${GHOST_VERSION:-6-alpine}
-    restart: always
-    expose:
-      - "127.0.0.1:${GHOST_PORT:-2368}:2368"
-    # This is required to import current config when migrating
+    restart: unless-stopped
+    
+    # REMOVED: expose section
+    # WHY: Coolify automatically detects and routes to Ghost's port 2368
+    # The original expose was: "127.0.0.1:${GHOST_PORT:-2368}:2368"
     env_file:
       - .env
     environment:
       NODE_ENV: production
+      # Use DOMAIN variable for consistency with official setup
+      # This should match your custom domain set in Coolify
       url: https://${DOMAIN:?DOMAIN environment variable is required}
+      # Admin domain support
+      # NOTE: Coolify limitation - can only route one domain per service
+      # For separate admin domain, you'll need additional proxy setup
       admin__url: ${ADMIN_DOMAIN:+https://${ADMIN_DOMAIN}}
       database__client: mysql
       database__connection__host: db
@@ -43,6 +35,17 @@ services:
       tinybird__workspaceId: ${TINYBIRD_WORKSPACE_ID:-}
       tinybird__tracker__datasource: analytics_events
       tinybird__stats__endpoint: ${TINYBIRD_API_URL:-https://api.tinybird.co}
+      activitypub__target: ${ACTIVITYPUB_TARGET:-https://ap.ghost.org}
+      # SMTP Email configuration (recommended)
+      mail__transport: ${MAIL_TRANSPORT:-SMTP}
+      mail__options__service: ${SMTP_SERVICE:-}
+      mail__options__host: ${SMTP_HOST:-}
+      mail__options__port: ${SMTP_PORT:-587}
+      mail__options__secure: ${SMTP_SECURE:-false}
+      mail__options__auth__user: ${SMTP_USER:-}
+      mail__options__auth__pass: ${SMTP_PASS:-}
+      mail__from: ${MAIL_FROM:-}
+      
     volumes:
       - ${UPLOAD_LOCATION:-./data/ghost}:/var/lib/ghost/content
     depends_on:
@@ -62,9 +65,7 @@ services:
 
   db:
     image: mysql:8.0.42@sha256:4445b2668d41143cb50e471ee207f8822006249b6859b24f7e12479684def5d9
-    restart: always
-    expose:
-      - "3306"
+    restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${DATABASE_ROOT_PASSWORD:?DATABASE_ROOT_PASSWORD environment variable is required}
       MYSQL_USER: ${DATABASE_USER:-ghost}
@@ -83,11 +84,10 @@ services:
     networks:
       - ghost_network
 
+  # Analytics Services (enabled with COMPOSE_PROFILES=analytics)
   traffic-analytics:
     image: ghost/traffic-analytics:1.0.3@sha256:f9122d48b37182464fd698afd5a1d43c4b5d16fb53089f3794a401666970e4b3
-    restart: always
-    expose:
-      - "3000"
+    restart: unless-stopped
     volumes:
       - traffic_analytics_data:/data
     environment:
@@ -103,9 +103,7 @@ services:
 
   activitypub:
     image: ghcr.io/tryghost/activitypub:1.0.1@sha256:eafd011c93ced77e51a59358600ebc26cc007f3f61a4be8d759d43df21fe48c4
-    restart: always
-    expose:
-      - "8080"
+    restart: unless-stopped
     volumes:
       - ${UPLOAD_LOCATION:-./data/ghost}:/opt/activitypub/content
     environment:
@@ -128,7 +126,7 @@ services:
     networks:
       - ghost_network
 
-  # Suporting Services
+  # Supporting Services - Keep all as-is since they're internal
 
   tinybird-login:
     build:
@@ -146,7 +144,6 @@ services:
     restart: no
 
   tinybird-sync:
-    # Do not alter this without updating the Ghost container as well
     image: ghost:${GHOST_VERSION:-6-alpine}
     command: >
       sh -c "
@@ -201,8 +198,6 @@ services:
     restart: no
 
 volumes:
-  caddy_data:
-  caddy_config:
   tinybird_files:
   tinybird_home:
   traffic_analytics_data:
