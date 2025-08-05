@@ -24,7 +24,7 @@ services:
       # Admin domain support
       # NOTE: Coolify limitation - can only route one domain per service
       # For separate admin domain, you'll need additional proxy setup
-      admin__url: ${ADMIN_DOMAIN:+https://${ADMIN_DOMAIN}}
+      # admin__url: ${ADMIN_DOMAIN:+https://${ADMIN_DOMAIN}}
       database__client: mysql
       database__connection__host: db
       database__connection__user: ${DATABASE_USER:-ghost}
