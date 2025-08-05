@@ -105,7 +105,8 @@ services:
     image: ghcr.io/tryghost/activitypub:1.0.1@sha256:eafd011c93ced77e51a59358600ebc26cc007f3f61a4be8d759d43df21fe48c4
     restart: unless-stopped
     volumes:
-      - ${UPLOAD_LOCATION:-./data/ghost}:/opt/activitypub/content
+      - ./data/mysql:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
     environment:
       NODE_ENV: production
       PORT: 8080
